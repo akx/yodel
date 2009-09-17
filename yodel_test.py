@@ -15,28 +15,7 @@ def testCairoGetCtx(surf, w, h):
 			ctx.fill()
 	return ctx
 
-def ttpCairoTest(text, surf):
-	poly = yodel.Polygon.fromText(text, False)
-	ctx = testCairoGetCtx(surf, poly.width, poly.height)
-		
-	for l in poly.lines:
-		(x0, y0), (x1, y1) = l
-		
-		ctx.new_path()
-		ctx.set_line_width(0.1)
-		ctx.set_source_rgb(0,0,0)
-		ctx.move_to(x0, y0)
-		ctx.line_to(x1, y1)
-		ctx.stroke()
-		
-	for xy in poly.points:
-		x, y = xy
-		ctx.new_path()
-		ctx.set_line_width(0.2)
-		ctx.arc(x, y, .2, 0, 2*math.pi)
-		ctx.set_source_rgba(1,0,0,.5)
-		ctx.fill()	
-	
+def testCairoPrintLines(ctx, poly):
 	ctx.set_source_rgba(0,0,1,1)
 	ctx.identity_matrix()
 	ctx.select_font_face("Courier New")
@@ -44,6 +23,28 @@ def ttpCairoTest(text, surf):
 	for y, l in enumerate(poly.textLines):
 		ctx.move_to(800, 20 + y*25)
 		ctx.show_text(l)
+
+def ttpCairoTest(text, surf):
+	poly = yodel.Polygon.fromText(text, False)
+	ctx = testCairoGetCtx(surf, poly.width, poly.height)
+	
+	for l in poly.lines:
+		ctx.new_path()
+		ctx.set_line_width(0.1)
+		ctx.set_source_rgb(0,0,0)
+		ctx.move_to(*l[0])
+		ctx.line_to(*l[1])
+		ctx.stroke()
+	
+	for x, y in poly.points:
+		ctx.new_path()
+		ctx.set_line_width(0.2)
+		ctx.arc(x, y, .2, 0, 2*math.pi)
+		ctx.set_source_rgba(1,0,0,.5)
+		ctx.fill()
+	
+	testCairoPrintLines(ctx, poly)
+
 
 def ttpCairoPNG(text, outfile):
 	surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, 1200, 800)
@@ -55,10 +56,10 @@ def ttpCairoPDF(text, outfile):
 	ttpCairoTest(text, surf)
 	
 def ttpolyCairoPNG(text, outfile):
-	poly = yodel.Polygon.fromText(text, True)
+	ypoly = yodel.Polygon.fromText(text, True)
 	surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, 1200, 800)
-	ctx = testCairoGetCtx(surf, poly.width, poly.height)
-	for poly in poly.polys:
+	ctx = testCairoGetCtx(surf, ypoly.width, ypoly.height)
+	for poly in ypoly.polys:
 		ctx.new_path()
 		ctx.set_line_width(0.1)
 		
@@ -72,20 +73,25 @@ def ttpolyCairoPNG(text, outfile):
 		ctx.fill_preserve()
 		ctx.set_source_rgb(0,0,0)
 		ctx.stroke()
-		
+	
+	testCairoPrintLines(ctx, ypoly)
 	surf.write_to_png(outfile)
 	
 
-c1="""
+models={
+
+"wedge":
+"""
 #----#-----#
 |          |
 |   #--#---#
 |   .
 |  / 
 #-# 
-"""
+""",
 
-c2="""
+"c-letter":
+"""
  #----#
 #      #
 |  #--#
@@ -94,5 +100,9 @@ c2="""
 #      #
  #----#
 """
-ttpolyCairoPNG(c2, "yodel_poly.png")
-ttpCairoPNG(c2, "yodel_tmp.png")
+}
+
+for modelName, modelData in models.iteritems():
+	print "Processing %s..."%modelName
+	ttpolyCairoPNG(modelData, "%s_poly.png"%modelName)
+	ttpCairoPNG(modelData, "%s_lines.png"%modelName)
